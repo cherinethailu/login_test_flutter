@@ -6,3 +6,6 @@ An illustration/POC to show
     transliteration between several languages and 
     MVEL expression validation.
 in the android-registration-client
+
+Transliteration: lib/home/home.dart 
+MVEL Expression: lib/home/home.dart -> _evaluateMvel()
