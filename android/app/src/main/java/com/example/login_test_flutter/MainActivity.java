@@ -1,6 +1,12 @@
 package com.example.login_test_flutter;
 
 import android.os.Bundle;
+
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.File;
+
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -8,8 +14,14 @@ import androidx.annotation.Nullable;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.inject.Inject;
 
@@ -19,8 +31,12 @@ import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugins.GeneratedPluginRegistrant;
 import io.mosip.registration.clientmanager.constant.AuditEvent;
 import io.mosip.registration.clientmanager.constant.Components;
+import io.mosip.registration.clientmanager.constant.Modality;
 import io.mosip.registration.clientmanager.dto.http.ResponseWrapper;
 import io.mosip.registration.clientmanager.dto.http.ServiceError;
+import io.mosip.registration.clientmanager.dto.registration.BiometricsDto;
+import io.mosip.registration.clientmanager.dto.registration.DocumentDto;
+import io.mosip.registration.clientmanager.dto.registration.RegistrationDto;
 import io.mosip.registration.clientmanager.exception.InvalidMachineSpecIDException;
 import io.mosip.registration.clientmanager.service.LoginService;
 import io.mosip.registration.clientmanager.spi.AuditManagerService;
@@ -50,7 +66,6 @@ public class MainActivity extends FlutterActivity {
     private static final String VALIDATE_MVEL = "com.flutter.dev/clientmanager.evaluate-mvel";
     private static final String MVEL_CONTEXT_KEY = "identity";
     private static final String TAG = UserInterfaceHelperService.class.getSimpleName();
-
     @Inject
     ClientCryptoManagerService clientCryptoManagerService;
 
@@ -107,11 +122,14 @@ public class MainActivity extends FlutterActivity {
         return true;
     }
 
-    public static boolean evaluateMvel(String expression, HashMap<String, Object> dataContext) {
+    public static boolean evaluateMvel(String expression, Map dataContext) {
         try {
+            Map context = new HashMap();
+            context.put(MVEL_CONTEXT_KEY, dataContext);
+            VariableResolverFactory resolverFactory = new MapVariableResolverFactory(context);
+            System.out.println("Data context:" + dataContext + "\nExpression:" + expression);
 
-//            VariableResolverFactory resolverFactory = new MapVariableResolverFactory(context);
-            return MVEL.evalToBoolean(expression, dataContext);
+            return MVEL.evalToBoolean(expression, resolverFactory);
         } catch (Throwable t) {
             Log.e(TAG, "Failed to evaluate mvel expression", t);
         }
@@ -137,7 +155,7 @@ public class MainActivity extends FlutterActivity {
                             responseMap.put("isLoggedIn", "true");
                             responseMap.put("login_response", login_response);
                             object = new JSONObject(responseMap);
-                            result.success(object);
+                            result.success(object.toString());
                             return;
                         } catch (InvalidMachineSpecIDException e) {
                             error = new ServiceError("", e.getMessage());
@@ -256,13 +274,53 @@ public class MainActivity extends FlutterActivity {
                 .setMethodCallHandler(
                         (call, result) -> {
                             if(call.method.equals("evaluateMvel")) {
-                                HashMap<String, Object> dataContext = new HashMap<String, Object>();
-                                String mvelExpressionFromChannel = call.argument("mvelExpression");
-                                dataContext = call.argument("dataContext");
 
-                                System.out.println("DataContext: " + dataContext);
-                                System.out.println("MVEL Expression is: {" + mvelExpressionFromChannel + "} and MVEL Response is: " + evaluateMvel(mvelExpressionFromChannel, dataContext));
-                                result.success(dataContext);
+                                Map<Object, Object> data;
+                                ArrayList<String> languages = new ArrayList<>();
+                                String rID;
+                                String flowType;
+                                String process;
+                                double schemaVersion;
+                                Map<String, Object> demographics = new HashMap<>();
+                                Map<String, DocumentDto> documents = new HashMap<>();
+                                Map<String, BiometricsDto> biometrics = new HashMap<>();
+                                Map<String, AtomicInteger> ATTEMPTS = null;
+                                Map<String, Set<String>> EXCEPTIONS = null;
+                                Map<Modality, Integer> BIO_THRESHOLDS = new HashMap<>();
+                                Set<String> CAPTURED_BIO_FIELDS = null;
+                                Map<Modality, Object> BIO_DEVICES = null;
+                                ArrayList<String> gender = new ArrayList<>();
+
+                                try {
+                                    ObjectMapper objectMapper = new ObjectMapper();
+//                                    data = objectMapper.readValue(new File(DUMMY_REGISTRATION_FILE_NAME), new TypeReference<Map<Object,Object>>(){});
+                                    languages.add("ara");
+                                    languages.add("eng");
+                                    gender.add("male");
+                                    gender.add("female");
+                                    rID = "10001106921003120220704141850";
+                                    flowType = "NEW";
+                                    process = "NEW";
+                                    schemaVersion = 0.1;
+                                    demographics.put("gender", gender);
+                                    documents.put("proofOfIdentity", new DocumentDto() );
+                                    biometrics.put("individualBiometrics_leftLittle", new BiometricsDto());
+//                                    ATTEMPTS.put("%s_%s", new AtomicInteger());
+//                                    EXCEPTIONS.put("%s_%s", new HashSet<>());
+                                    BIO_THRESHOLDS.put(Modality.getModality("modality"), 80);
+//                                    CAPTURED_BIO_FIELDS.add("FIELDID");
+//                                    BIO_DEVICES.put(Modality.getModality("modality"), 80);
+                                    Map<String, Object> dataContext = new RegistrationDto(call.argument("rID"),call.argument("flowType"),call.argument("process"),call.argument("schemaVersion"),call.argument("languageList"),BIO_THRESHOLDS).getMVELDataContext();
+//                                    Map<String, Object> context = new HashMap<>();
+//                                    context.put("dataContext", dataContext);
+                                    System.out.println("MVEL Output: " + evaluateMvel(call.argument("mvelExpression"), dataContext));
+
+                                    result.success(evaluateMvel(call.argument("mvelExpression"),  dataContext));
+
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+
                             } else {
                                 result.notImplemented();
                             }
