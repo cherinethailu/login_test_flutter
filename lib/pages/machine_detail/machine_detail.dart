@@ -39,8 +39,8 @@ class _MachineDetailState extends State<MachineDetail> {
       body:  Column(
         children: [
           machineDetail == "Waiting..." ? Text(" ") : IconButton(onPressed: (){
-             
               if(_write(machineDetail)){
+                print('Successfully downloaded machine details!');
                 Fluttertoast.showToast(
                                     msg: 'Successfully downloaded machine details!',
                                     toastLength: Toast.LENGTH_SHORT,
@@ -51,6 +51,7 @@ class _MachineDetailState extends State<MachineDetail> {
                                 );
               }
               else{
+                print('Error occurred while downloading machine details');
                 Fluttertoast.showToast(
                                     msg: 'Error occurred while downloading machine details',
                                     toastLength: Toast.LENGTH_SHORT,

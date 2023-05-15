@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:login_test_flutter/pages/home/home.dart';
 import 'package:login_test_flutter/pages/login_form/login_form.dart';
 
 void main() {
@@ -27,7 +28,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return const MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: LoginForm());
+        home: Home());
   }
 
   Future<void> _callAppComponent() async {
